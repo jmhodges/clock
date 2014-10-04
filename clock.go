@@ -5,7 +5,7 @@
 // in tests to create Clocks that control what time the production
 // code sees.
 //
-// Be sure to test Time equality with Time#Equal, not ==.
+// Be sure to test Time equality with time.Time#Equal, not ==.
 package clock
 
 import (
