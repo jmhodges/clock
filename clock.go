@@ -1,4 +1,5 @@
-// Package clock provides the ability to test time-sensitive code.
+// Package clock provides an abstraction for system time that enables
+// testing of time-sensitive code.
 //
 // By passing in Default to production code, you can then use NewFake
 // in tests to create Clocks that control what time that production
