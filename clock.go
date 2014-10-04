@@ -63,13 +63,13 @@ type FakeClock interface {
 // making it a *time.Time requires folks to know how to initialize a
 // time and that's another line of code every where.
 type fake struct {
-	sync.Mutex
+	sync.RWMutex
 	t time.Time
 }
 
 func (f *fake) Now() time.Time {
-	f.Lock()
-	defer f.Unlock()
+	f.RLock()
+	defer f.RUnlock()
 	return f.t
 }
 
