@@ -2,7 +2,7 @@
 // testing of time-sensitive code.
 //
 // By passing in Default to production code, you can then use NewFake
-// in tests to create Clocks that control what time that production
+// in tests to create Clocks that control what time the production
 // code sees.
 //
 // Be sure to test Time equality in your tests with with Time#Equal,
@@ -24,10 +24,8 @@ func Default() Clock {
 	return systemClock
 }
 
-// Clock returns the current time. It's main purpose is to allow for
-// writing time-dependent tests using FakeClock while passing in
-// Default to production code. Remember to test time equality with
-// Time#Equal, not ==.
+// Clock is an abstraction over system time. New instances of it can
+// be made with Default and NewFake.
 type Clock interface {
 	// Now returns the Clock's current view of the time. Mutating the
 	// returned Time will not mutate the clock's time.
@@ -41,7 +39,8 @@ func (s sysClock) Now() time.Time {
 }
 
 // NewFake returns a FakeClock to be used in tests that need to
-// manipulate time.
+// manipulate time. Its initial value is always the unix epoch in the
+// UTC timezone. The FakeClock returned is thread-safe.
 func NewFake() FakeClock {
 	// We're explicit about this time construction to avoid early user
 	// questions about why the time object doesn't have a Location by
@@ -49,9 +48,9 @@ func NewFake() FakeClock {
 	return &fake{t: time.Unix(0, 0).UTC()}
 }
 
-// FakeClock is a Clock to be passed into time-sensitive code to make
-// testing easy. Adjusting the FakeClock's view of time is done with
-// Add. Use NewFake to get a FakeClock implementation.
+// FakeClock is a Clock with additional controls. The return value of
+// Now return can be modified with Add. Use NewFake to get a
+// thread-safe FakeClock implementation.
 type FakeClock interface {
 	Clock
 	// Adjust the time that will be returned by Now.
