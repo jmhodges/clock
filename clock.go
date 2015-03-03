@@ -59,9 +59,7 @@ type FakeClock interface {
 // To prevent mistakes with the API, we hide this behind NewFake. It's
 // easy forget to create a pointer to a fake since time.Time (and
 // sync.Mutex) are also simple values. The code will appear to work
-// but the clock's time will never be adjusted. The alternative of
-// making it a *time.Time requires folks to know how to initialize a
-// time and that's another line of code every where.
+// but the clock's time will never be adjusted.
 type fake struct {
 	sync.RWMutex
 	t time.Time
