@@ -8,10 +8,9 @@
 // Default() and when you're running it in your tests, pass it an
 // instance of Clock from NewFake().
 //
-// When you do that, you can use FakeClock's
-// the Add and Set methods to control how time behaves in your code
-// making them more reliable while also expanding the space of
-// problems you can test.
+// When you do that, you can use FakeClock's Add and Set methods to
+// control how time behaves in your code making them more reliable
+// while also expanding the space of problems you can test.
 //
 // Be sure to test Time equality with time.Time#Equal, not ==.
 package clock
