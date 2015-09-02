@@ -54,6 +54,9 @@ type FakeClock interface {
 	Clock
 	// Adjust the time that will be returned by Now.
 	Add(d time.Duration)
+
+	// Set the Clock's time to exactly the time given.
+	Set(t time.Time)
 }
 
 // To prevent mistakes with the API, we hide this behind NewFake. It's
@@ -75,4 +78,10 @@ func (f *fake) Add(d time.Duration) {
 	f.Lock()
 	defer f.Unlock()
 	f.t = f.t.Add(d)
+}
+
+func (f *fake) Set(t time.Time) {
+	f.Lock()
+	defer f.Unlock()
+	f.t = t
 }
