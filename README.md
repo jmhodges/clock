@@ -16,6 +16,11 @@ When you do that, you can use FakeClock's Add and Set methods to
 control how time behaves in your code making them more reliable while
 also expanding the space of problems you can test.
 
+This code intentionally does not attempt to provide an abstraction
+over time.Ticker and time.Timer because Go does not have the runtime
+or API hooks available to do reliably. See
+https://github.com/golang/go/issues/8869
+
 Be sure to test Time equality with time.Time#Equal, not ==.
 
 For documentation, see the
