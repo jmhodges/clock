@@ -4,9 +4,9 @@
 // Where you'd use time.Now, instead use clk.Now where clk is an
 // instance of Clock.
 //
-// Pass in a Clock given by Default() when running your code in
-// production and pass it an instance of Clock from NewFake() when
-// running it in your tests.
+// When running your code in production, pass it a Clock given by
+// Default() and when you're running it in your tests, pass it an
+// instance of Clock from NewFake().
 //
 // When you do that, you can use FakeClock's
 // the Add and Set methods to control how time behaves in your code
