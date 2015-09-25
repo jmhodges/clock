@@ -41,12 +41,17 @@ type Clock interface {
 	// Now returns the Clock's current view of the time. Mutating the
 	// returned Time will not mutate the clock's time.
 	Now() time.Time
+	Sleep(time.Duration)
 }
 
 type sysClock struct{}
 
 func (s sysClock) Now() time.Time {
 	return time.Now()
+}
+
+func (s sysClock) Sleep(d time.Duration) {
+	time.Sleep(d)
 }
 
 // NewFake returns a FakeClock to be used in tests that need to
@@ -85,6 +90,10 @@ func (f *fake) Now() time.Time {
 	defer f.RUnlock()
 	return f.t
 }
+
+func (f *fake) Sleep(d time.Duration) {
+	f.Add(d)
+}	
 
 func (f *fake) Add(d time.Duration) {
 	f.Lock()
