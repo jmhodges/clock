@@ -30,6 +30,17 @@ func TestFakeClockGoldenPath(t *testing.T) {
 	}
 }
 
+func TestNegativeSleep(t *testing.T) {
+	clk := NewFake()
+	clk.Add(1 * time.Hour)
+	first := clk.Now()
+	clk.Sleep(-10 * time.Second)
+	if !clk.Now().Equal(first) {
+		t.Errorf("clk should not move in time on a negative sleep")
+	}
+
+}
+
 func ExampleClock() {
 	c := Default()
 	now := c.Now()

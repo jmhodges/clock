@@ -92,8 +92,12 @@ func (f *fake) Now() time.Time {
 }
 
 func (f *fake) Sleep(d time.Duration) {
+	if d < 0 {
+		// time.Sleep just returns immediately. Do the same.
+		return
+	}
 	f.Add(d)
-}	
+}
 
 func (f *fake) Add(d time.Duration) {
 	f.Lock()
