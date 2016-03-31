@@ -104,13 +104,154 @@ func TestFakeTimerStop(t *testing.T) {
 func TestFakeTimerReset(t *testing.T) {
 	clk := NewFake()
 	tt := clk.NewTimer(1 * time.Second)
-
+	before := clk.Now()
 	if tt.Reset(1 * time.Second) {
 		t.Errorf("Reset: was already expired and shouldn't be")
 	}
+	clk.Add(1 * time.Second)
+	if !tt.Reset(1 * time.Hour) {
+		t.Errorf("should have already been expired")
+	}
+	clk.Add(1 * time.Hour)
+	t1, err := waitFor(tt.C)
+	if err != nil {
+		t.Fatal(err)
+	}
+	oneSec := before.Add(1 * time.Second)
+	if t1 != oneSec {
+		t.Errorf("first: want %s, got %s", t1, oneSec)
+	}
+
+	select {
+	case <-tt.C:
+		t.Fatal("second reset should never fire")
+	default:
+	}
+}
+
+func TestFakeTimerResetAgain(t *testing.T) {
+	clk := NewFake()
+	tt := clk.NewTimer(1 * time.Second)
+	before := clk.Now()
+	if tt.Reset(1 * time.Second) {
+		t.Errorf("Reset: was already expired and shouldn't be")
+	}
+	clk.Add(1 * time.Second)
+	t1, err := waitFor(tt.C)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !tt.Reset(1 * time.Hour) {
+		t.Errorf("should have already been expired")
+	}
+	clk.Add(1 * time.Hour)
+	oneSec := before.Add(1 * time.Second)
+	if t1 != oneSec {
+		t.Errorf("first: want %s, got %s", t1, oneSec)
+	}
+
+	_, err = waitFor(tt.C)
+	if err != nil {
+		t.Fatal("second reset should have already fired")
+	}
+
+}
+
+func TestRealTimerResetAgain(t *testing.T) {
+	clk := Default()
+	tt := clk.NewTimer(4 * time.Second)
+	if tt.Reset(4 * time.Second) {
+		t.Errorf("Reset: was already expired and shouldn't be")
+	}
+	clk.Sleep(5 * time.Second)
+	_, err := waitFor(tt.C)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !tt.Reset(10 * time.Second) {
+		t.Errorf("should have already been expired")
+	}
+	clk.Sleep(12 * time.Second)
+
+	_, err = waitFor(tt.C)
+	if err != nil {
+		t.Fatal("second reset should have already fired")
+	}
+
 }
 
 func TestFakeTimerOrderOfTimers(t *testing.T) {
+	clk := NewFake()
+	t2 := clk.NewTimer(2 * time.Hour)
+	t3 := clk.NewTimer(3 * time.Hour)
+	t1 := clk.NewTimer(1 * time.Hour)
+	before := clk.Now()
+	clk.Add(3 * time.Hour)
+
+	expected1 := before.Add(1 * time.Hour)
+	expected2 := before.Add(2 * time.Hour)
+	expected3 := before.Add(3 * time.Hour)
+
+	actual1, err := waitFor(t1.C)
+	if err != nil {
+		t.Errorf("expected t1 to fire, but did not")
+	}
+	if !actual1.Equal(expected1) {
+		t.Errorf("t1: want %s, got %s", expected1, actual1)
+	}
+	actual2, err := waitFor(t2.C)
+	if err != nil {
+		t.Fatalf("expected t2 to fire first, but did not")
+	}
+	if !actual2.Equal(expected2) {
+		t.Errorf("t2: want %s, got %s", expected2, actual2)
+	}
+
+	actual3, err := waitFor(t3.C)
+	if err != nil {
+		t.Fatalf("expected t3 to fire first, but did not")
+	}
+	if !actual3.Equal(expected3) {
+		t.Errorf("t3: want %s, got %s", expected3, actual3)
+	}
+}
+
+func XTestRealTimerReset(t *testing.T) {
+	clk := Default()
+	tt := clk.NewTimer(1 * time.Second)
+	before := clk.Now()
+	if tt.Reset(1 * time.Second) {
+		t.Errorf("Reset: was already expired and shouldn't be")
+	}
+	clk.Sleep(2 * time.Second)
+	if !tt.Reset(10 * time.Second) {
+		t.Errorf("should have already been expired")
+	}
+	clk.Sleep(11 * time.Second)
+	_, err := waitFor(tt.C)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// oneSec := before.Add(1 * time.Second)
+	// if t1 != oneSec {
+	// 	t.Errorf("first: want %s, got %s", t1, oneSec)
+	// }
+
+	t2, err := waitFor(tt.C)
+	if err != nil {
+		t.Fatal("second one never fired")
+	}
+
+	oneHour := before.Add(1 * time.Second).Add(1 * time.Hour)
+	if t2 != oneHour {
+		t.Errorf("second: %s, got %s", t2, oneHour)
+	}
+
+}
+
+func TestTimerOrderOfTimers(t *testing.T) {
 	clk := NewFake()
 	t2 := clk.NewTimer(2 * time.Hour)
 	t3 := clk.NewTimer(3 * time.Hour)

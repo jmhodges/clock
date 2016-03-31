@@ -36,8 +36,11 @@ func (ft *fakeTimer) Reset(d time.Duration) bool {
 	ft.target = ft.clk.t.Add(d)
 	exp := ft.expired
 	ft.expired = false
+	if !exp {
+		ft.clk.timers = append(ft.clk.timers, ft)
+	}
 	ft.clk.sendTimes()
-	return exp
+	return !exp
 }
 
 func (ft *fakeTimer) Stop() bool {
