@@ -1,6 +1,7 @@
 package clock
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -38,7 +39,151 @@ func TestNegativeSleep(t *testing.T) {
 	if !clk.Now().Equal(first) {
 		t.Errorf("clk should not move in time on a negative sleep")
 	}
+}
 
+func TestFakeTimer(t *testing.T) {
+	clk := NewFake()
+	setTo := clk.Now().Add(3 * time.Hour)
+	tests := []struct {
+		f       func(clk FakeClock)
+		recvVal time.Time
+		nowVal  time.Time
+	}{
+		{
+			func(fc FakeClock) {
+				fc.Add(2 * time.Hour)
+			},
+			clk.Now().Add(1 * time.Hour),
+			clk.Now().Add(2 * time.Hour),
+		},
+		{
+			func(fc FakeClock) {
+				fc.Set(setTo)
+			},
+			clk.Now().Add(1 * time.Hour),
+			clk.Now().Add(3 * time.Hour),
+		},
+		{
+			func(fc FakeClock) {
+				fc.Sleep(2 * time.Hour)
+			},
+			clk.Now().Add(1 * time.Hour),
+			clk.Now().Add(2 * time.Hour),
+		},
+	}
+	for i, tc := range tests {
+		clk := NewFake()
+		timer := clk.NewTimer(1 * time.Hour)
+		go tc.f(clk)
+
+		select {
+		case <-time.After(2 * time.Second):
+			t.Fatalf("didn't receive time notification")
+		case recvVal := <-timer.C:
+			if !recvVal.Equal(tc.recvVal) {
+				t.Errorf("#%d, <-timer.C: want %s, got %s", i, tc.recvVal, recvVal)
+			}
+			if !clk.Now().Equal(tc.nowVal) {
+				t.Errorf("#%d, clk.Now: want %s, got %s", i, tc.nowVal, clk.Now())
+			}
+		}
+	}
+}
+
+func TestFakeTimerStop(t *testing.T) {
+	clk := NewFake()
+	tt := clk.NewTimer(1 * time.Second)
+	if tt.Stop() {
+		t.Errorf("Stop: thought it was stopped or expired already")
+	}
+	if !tt.Stop() {
+		t.Errorf("Stop, again: thought it was stopped or expired already")
+	}
+}
+
+func TestFakeTimerReset(t *testing.T) {
+	clk := NewFake()
+	tt := clk.NewTimer(1 * time.Second)
+
+	if tt.Reset(1 * time.Second) {
+		t.Errorf("Reset: was already expired and shouldn't be")
+	}
+}
+
+func TestFakeTimerOrderOfTimers(t *testing.T) {
+	clk := NewFake()
+	t2 := clk.NewTimer(2 * time.Hour)
+	t3 := clk.NewTimer(3 * time.Hour)
+	t1 := clk.NewTimer(1 * time.Hour)
+	before := clk.Now()
+	clk.Add(3 * time.Hour)
+
+	expected1 := before.Add(1 * time.Hour)
+	expected2 := before.Add(2 * time.Hour)
+	expected3 := before.Add(3 * time.Hour)
+
+	actual1, err := waitFor(t1.C)
+	if err != nil {
+		t.Errorf("expected t1 to fire, but did not")
+	}
+	if !actual1.Equal(expected1) {
+		t.Errorf("t1: want %s, got %s", expected1, actual1)
+	}
+	actual2, err := waitFor(t2.C)
+	if err != nil {
+		t.Fatalf("expected t2 to fire first, but did not")
+	}
+	if !actual2.Equal(expected2) {
+		t.Errorf("t2: want %s, got %s", expected2, actual2)
+	}
+
+	actual3, err := waitFor(t3.C)
+	if err != nil {
+		t.Fatalf("expected t3 to fire first, but did not")
+	}
+	if !actual3.Equal(expected3) {
+		t.Errorf("t3: want %s, got %s", expected3, actual3)
+	}
+}
+
+func TestFakeTimerExpiresAfterFiring(t *testing.T) {
+	clk := NewFake()
+	tt := clk.NewTimer(1 * time.Hour)
+	go func() {
+		clk.Add(1 * time.Hour)
+	}()
+	_, err := waitFor(tt.C)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !tt.fakeTimer.expired {
+		t.Errorf("did not expire after firing")
+	}
+	if !tt.Stop() {
+		t.Errorf("Stop: was not already expired after firing")
+	}
+}
+
+func TestFakeAfter(t *testing.T) {
+	clk := NewFake()
+	ch := clk.After(1 * time.Hour)
+	go func() { clk.Add(1 * time.Hour) }()
+	t1, err := waitFor(ch)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if t1 != clk.Now() {
+		t.Errorf("After: want %s, got %s", clk.Now(), t1)
+	}
+}
+
+func waitFor(c <-chan time.Time) (time.Time, error) {
+	select {
+	case <-time.After(2 * time.Second):
+		return time.Time{}, errors.New("timeout")
+	case ti := <-c:
+		return ti, nil
+	}
 }
 
 func ExampleClock() {
