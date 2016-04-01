@@ -24,32 +24,32 @@ func (t *Timer) Stop() bool {
 }
 
 type fakeTimer struct {
-	c       chan<- time.Time
-	target  time.Time
-	clk     *fake
-	expired bool
+	c      chan<- time.Time
+	target time.Time
+	clk    *fake
+	active bool
 }
 
 func (ft *fakeTimer) Reset(d time.Duration) bool {
 	ft.clk.Lock()
 	defer ft.clk.Unlock()
 	ft.target = ft.clk.t.Add(d)
-	exp := ft.expired
-	ft.expired = false
-	if !exp {
+	active := ft.active
+	ft.active = true
+	if !active { // FIXME
 		ft.clk.timers = append(ft.clk.timers, ft)
 	}
 	ft.clk.sendTimes()
-	return !exp
+	return active
 }
 
 func (ft *fakeTimer) Stop() bool {
 	ft.clk.Lock()
 	defer ft.clk.Unlock()
-	exp := ft.expired
-	ft.expired = true
+	active := ft.active
+	ft.active = false
 	ft.clk.sendTimes()
-	return exp
+	return active
 }
 
 type sortedFakeTimers []*fakeTimer

@@ -127,9 +127,10 @@ func (f *fake) After(d time.Duration) <-chan time.Time {
 func (f *fake) NewTimer(d time.Duration) *Timer {
 	ch := make(chan time.Time, 1)
 	tt := f.Now().Add(d)
+	ft := &fakeTimer{c: ch, target: tt, clk: f, active: true}
 	t := &Timer{
 		C:         ch,
-		fakeTimer: &fakeTimer{c: ch, target: tt, clk: f},
+		fakeTimer: ft,
 	}
 	f.Lock()
 	defer f.Unlock()
@@ -157,14 +158,19 @@ func (f *fake) Set(t time.Time) {
 func (f *fake) sendTimes() {
 	newTimers := make(sortedFakeTimers, 0)
 	for _, ft := range f.timers {
-		if ft.expired {
+		if !ft.active {
 			continue
 		}
 		if ft.target.Equal(f.t) || ft.target.Before(f.t) {
-			ft.expired = true
-			ft.c <- ft.target
+			ft.active = false
+			// The select is to drop second sends from resets without a user
+			// receiving from ft.c.
+			select {
+			case ft.c <- ft.target:
+			default:
+			}
 		}
-		if !ft.expired {
+		if ft.active {
 			newTimers = append(newTimers, ft)
 		}
 	}
