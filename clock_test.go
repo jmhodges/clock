@@ -1,7 +1,6 @@
 package clock
 
 import (
-	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -113,19 +112,17 @@ func TestFakeTimerReset(t *testing.T) {
 		t.Errorf("should have already been expired")
 	}
 	clk.Add(1 * time.Hour)
-	t1, err := waitFor(tt.C)
-	if err != nil {
-		t.Fatal(err)
+	t1 := waitFor(tt.C)
+	if t1 == nil {
+		t.Fatal("timeout")
 	}
 	oneSec := before.Add(1 * time.Second)
-	if t1 != oneSec {
+	if *t1 != oneSec {
 		t.Errorf("first: want %s, got %s", oneSec, t1)
 	}
 
-	select {
-	case <-tt.C:
+	if immediatelySeeNothing(tt.C) != nil {
 		t.Fatal("second reset should never fire")
-	default:
 	}
 }
 
@@ -137,9 +134,9 @@ func TestFakeTimerResetAgain(t *testing.T) {
 		t.Errorf("Reset: was already expired and shouldn't be")
 	}
 	clk.Add(1 * time.Second)
-	t1, err := waitFor(tt.C)
-	if err != nil {
-		t.Fatal(err)
+	t1 := waitFor(tt.C)
+	if t1 == nil {
+		t.Fatal("timeout")
 	}
 
 	if tt.Reset(1 * time.Hour) {
@@ -147,12 +144,12 @@ func TestFakeTimerResetAgain(t *testing.T) {
 	}
 	clk.Add(1 * time.Hour)
 	oneSec := before.Add(1 * time.Second)
-	if t1 != oneSec {
+	if *t1 != oneSec {
 		t.Errorf("first: want %s, got %s", t1, oneSec)
 	}
 
-	_, err = waitFor(tt.C)
-	if err != nil {
+	t2 := waitFor(tt.C)
+	if t2 == nil {
 		t.Fatal("second reset should have already fired")
 	}
 
@@ -165,17 +162,17 @@ func TestFakeTimerResetAgainWithSleep(t *testing.T) {
 		t.Errorf("Reset: was already expired and shouldn't be")
 	}
 	clk.Sleep(5 * time.Second)
-	_, err := waitFor(tt.C)
-	if err != nil {
-		t.Fatal(err)
+	t1 := waitFor(tt.C)
+	if t1 == nil {
+		t.Fatal("timeout")
 	}
 
 	if tt.Reset(10 * time.Second) {
 		t.Errorf("should have already been expired")
 	}
 	clk.Sleep(12 * time.Second)
-	_, err = waitFor(tt.C)
-	if err != nil {
+	t2 := waitFor(tt.C)
+	if t2 == nil {
 		t.Fatal("second reset should have already fired")
 	}
 }
@@ -192,23 +189,23 @@ func TestFakeTimerOrderOfTimers(t *testing.T) {
 	expected2 := before.Add(2 * time.Hour)
 	expected3 := before.Add(3 * time.Hour)
 
-	actual1, err := waitFor(t1.C)
-	if err != nil {
+	actual1 := waitFor(t1.C)
+	if actual1 == nil {
 		t.Errorf("expected t1 to fire, but did not")
 	}
 	if !actual1.Equal(expected1) {
 		t.Errorf("t1: want %s, got %s", expected1, actual1)
 	}
-	actual2, err := waitFor(t2.C)
-	if err != nil {
+	actual2 := waitFor(t2.C)
+	if actual2 == nil {
 		t.Fatalf("expected t2 to fire first, but did not")
 	}
 	if !actual2.Equal(expected2) {
 		t.Errorf("t2: want %s, got %s", expected2, actual2)
 	}
 
-	actual3, err := waitFor(t3.C)
-	if err != nil {
+	actual3 := waitFor(t3.C)
+	if actual3 == nil {
 		t.Fatalf("expected t3 to fire first, but did not")
 	}
 	if !actual3.Equal(expected3) {
@@ -228,23 +225,23 @@ func TestTimerOrderOfTimers(t *testing.T) {
 	expected2 := before.Add(2 * time.Hour)
 	expected3 := before.Add(3 * time.Hour)
 
-	actual1, err := waitFor(t1.C)
-	if err != nil {
+	actual1 := waitFor(t1.C)
+	if actual1 == nil {
 		t.Errorf("expected t1 to fire, but did not")
 	}
 	if !actual1.Equal(expected1) {
 		t.Errorf("t1: want %s, got %s", expected1, actual1)
 	}
-	actual2, err := waitFor(t2.C)
-	if err != nil {
+	actual2 := waitFor(t2.C)
+	if actual2 == nil {
 		t.Fatalf("expected t2 to fire first, but did not")
 	}
 	if !actual2.Equal(expected2) {
 		t.Errorf("t2: want %s, got %s", expected2, actual2)
 	}
 
-	actual3, err := waitFor(t3.C)
-	if err != nil {
+	actual3 := waitFor(t3.C)
+	if actual3 == nil {
 		t.Fatalf("expected t3 to fire first, but did not")
 	}
 	if !actual3.Equal(expected3) {
@@ -258,9 +255,9 @@ func TestFakeTimerExpiresAfterFiring(t *testing.T) {
 	go func() {
 		clk.Add(1 * time.Hour)
 	}()
-	_, err := waitFor(tt.C)
-	if err != nil {
-		t.Fatal(err)
+	t1 := waitFor(tt.C)
+	if t1 == nil {
+		t.Fatal("timeout")
 	}
 	if tt.fakeTimer.active {
 		t.Errorf("did not expire after firing")
@@ -274,21 +271,68 @@ func TestFakeAfter(t *testing.T) {
 	clk := NewFake()
 	ch := clk.After(1 * time.Hour)
 	go func() { clk.Add(1 * time.Hour) }()
-	t1, err := waitFor(ch)
-	if err != nil {
-		t.Fatal(err)
+	t1 := waitFor(ch)
+	if t1 == nil {
+		t.Fatal("timeout")
 	}
-	if t1 != clk.Now() {
+	if !t1.Equal(clk.Now()) {
 		t.Errorf("After: want %s, got %s", clk.Now(), t1)
 	}
 }
 
-func waitFor(c <-chan time.Time) (time.Time, error) {
+func TestFakeTimerStopStopsOldSends(t *testing.T) {
+	clk := NewFake()
+	tt := clk.NewTimer(1 * time.Second)
+	tt.Stop()
+	clk.Add(1 * time.Second)
+	t1 := immediatelySeeNothing(tt.C)
+	if t1 != nil {
+		t.Errorf("expected no send, got %s", *t1)
+	}
+}
+
+func TestRealClock(t *testing.T) {
+	// for coverage
+	clk := Default()
+	clk.Now()
+	clk.Sleep(1 * time.Nanosecond)
+	clk.After(1 * time.Nanosecond)
+	tt := clk.NewTimer(1 * time.Nanosecond)
+	tt.Stop()
+	tt.Reset(1 * time.Nanosecond)
+}
+
+func TestFakeTimerResetStopsOldSends(t *testing.T) {
+	clk := NewFake()
+	tt := clk.NewTimer(1 * time.Second)
+	tt.Reset(2 * time.Second)
+	clk.Add(1 * time.Second)
+	t1 := immediatelySeeNothing(tt.C)
+	if t1 != nil {
+		t.Errorf("expected no send, got %s", *t1)
+	}
+	clk.Add(1 * time.Second)
+	t2 := waitFor(tt.C)
+	if t2 == nil {
+		t.Errorf("expected a send, got nothing")
+	}
+}
+
+func waitFor(c <-chan time.Time) *time.Time {
 	select {
-	case <-time.After(2 * time.Second):
-		return time.Time{}, errors.New("timeout")
 	case ti := <-c:
-		return ti, nil
+		return &ti
+	case <-time.After(2 * time.Second):
+		return nil
+	}
+}
+
+func immediatelySeeNothing(c <-chan time.Time) *time.Time {
+	select {
+	case ti := <-c:
+		return &ti
+	default:
+		return nil
 	}
 }
 

@@ -125,16 +125,17 @@ func (f *fake) After(d time.Duration) <-chan time.Time {
 }
 
 func (f *fake) NewTimer(d time.Duration) *Timer {
+	f.Lock()
+	defer f.Unlock()
 	ch := make(chan time.Time, 1)
-	tt := f.Now().Add(d)
+	tt := f.t.Add(d)
 	ft := &fakeTimer{c: ch, clk: f, active: true}
 	t := &Timer{
 		C:         ch,
 		fakeTimer: ft,
 	}
-	f.Lock()
-	defer f.Unlock()
-	f.addSend(tt, ft)
+	s := f.addSend(tt, ft)
+	ft.sends = []*send{s}
 	return t
 }
 
@@ -152,14 +153,16 @@ func (f *fake) Set(t time.Time) {
 	f.sendTimes()
 }
 
+// Only to be called while the fake's lock is held
 func (f *fake) sendTimes() {
 	newSends := make(sortedSends, 0)
 	for _, s := range f.sends {
-		if !s.ft.active {
+		if !s.active || !s.ft.active {
 			continue
 		}
 		if s.target.Equal(f.t) || s.target.Before(f.t) {
 			s.ft.active = false
+			s.active = false
 			// The select is to drop second sends from resets without a user
 			// receiving from ft.c.
 			select {
@@ -167,16 +170,45 @@ func (f *fake) sendTimes() {
 			default:
 			}
 		}
-		if s.ft.active {
+		if s.active {
 			newSends = append(newSends, s)
 		}
 	}
 	f.sends = newSends
 }
 
-func (f *fake) addSend(target time.Time, ft *fakeTimer) {
-	f.sends = append(f.sends, send{target: target, ft: ft})
+// Only to be called while the fake's lock is held
+func (f *fake) addSend(target time.Time, ft *fakeTimer) *send {
+	s := &send{target: target, ft: ft, active: true}
+	f.sends = append(f.sends, s)
 	// This will be a small enough slice to be fast. Can be replaced with a more
 	// complicated container if someone is making many timers.
 	sort.Sort(f.sends)
+	return s
+}
+
+// send is a struct that represents a scheduled send of a time.Time to its
+// fakeTimer's channel. They are actually sent when the relevant fake's time
+// goes equal or past their target time, as long as the relevant fakeTimer has
+// not been Reset or Stop'ed. When a Timer is Reset, the old sends are
+// deactivated and will be removed from the clocks list on the next attempt to
+// send.
+type send struct {
+	target time.Time
+	active bool
+	ft     *fakeTimer
+}
+
+type sortedSends []*send
+
+func (s sortedSends) Len() int {
+	return len(s)
+}
+
+func (s sortedSends) Less(i, j int) bool {
+	return s[i].target.Before(s[j].target)
+}
+
+func (s sortedSends) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
 }
