@@ -27,7 +27,9 @@ type fakeTimer struct {
 	c      chan<- time.Time
 	clk    *fake
 	active bool
-	sends  []*send
+	// sends is where we store all the sends made by this timer so we can
+	// deactivate the old ones when Reset or Stop is called.
+	sends []*send
 }
 
 func (ft *fakeTimer) Reset(d time.Duration) bool {
