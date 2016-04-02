@@ -308,7 +308,6 @@ func TestFakeTimerResetStopsOldSends(t *testing.T) {
 }
 
 func TestRealClock(t *testing.T) {
-	// for coverage
 	clk := Default()
 	clk.Now()
 	clk.Sleep(1 * time.Nanosecond)
