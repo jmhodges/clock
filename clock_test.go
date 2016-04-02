@@ -75,16 +75,16 @@ func TestFakeTimer(t *testing.T) {
 		timer := clk.NewTimer(1 * time.Hour)
 		go tc.f(clk)
 
-		select {
-		case <-time.After(2 * time.Second):
-			t.Fatalf("didn't receive time notification")
-		case recvVal := <-timer.C:
-			if !recvVal.Equal(tc.recvVal) {
-				t.Errorf("#%d, <-timer.C: want %s, got %s", i, tc.recvVal, recvVal)
-			}
-			if !clk.Now().Equal(tc.nowVal) {
-				t.Errorf("#%d, clk.Now: want %s, got %s", i, tc.nowVal, clk.Now())
-			}
+		recvVal := waitFor(timer.C)
+		if recvVal == nil {
+			t.Errorf("didn't receive time notification")
+			continue
+		}
+		if !recvVal.Equal(tc.recvVal) {
+			t.Errorf("#%d, <-timer.C: want %s, got %s", i, tc.recvVal, recvVal)
+		}
+		if !clk.Now().Equal(tc.nowVal) {
+			t.Errorf("#%d, clk.Now: want %s, got %s", i, tc.nowVal, clk.Now())
 		}
 	}
 }
