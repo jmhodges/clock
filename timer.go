@@ -24,8 +24,13 @@ func (t *Timer) Stop() bool {
 }
 
 type fakeTimer struct {
-	c      chan<- time.Time
-	clk    *fake
+	// c is the same chan as C in the Timer that contains this fakeTimer
+	c chan<- time.Time
+	// clk is kept so we can maintain just one lock and to add and attempt to
+	// send the times made by this timer during Resets and Stops
+	clk *fake
+	// active is true until the fakeTimer's send is attempted or it has been
+	// stopped
 	active bool
 	// sends is where we store all the sends made by this timer so we can
 	// deactivate the old ones when Reset or Stop is called.
