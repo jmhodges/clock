@@ -291,17 +291,6 @@ func TestFakeTimerStopStopsOldSends(t *testing.T) {
 	}
 }
 
-func TestRealClock(t *testing.T) {
-	// for coverage
-	clk := Default()
-	clk.Now()
-	clk.Sleep(1 * time.Nanosecond)
-	clk.After(1 * time.Nanosecond)
-	tt := clk.NewTimer(1 * time.Nanosecond)
-	tt.Stop()
-	tt.Reset(1 * time.Nanosecond)
-}
-
 func TestFakeTimerResetStopsOldSends(t *testing.T) {
 	clk := NewFake()
 	tt := clk.NewTimer(1 * time.Second)
@@ -316,6 +305,17 @@ func TestFakeTimerResetStopsOldSends(t *testing.T) {
 	if t2 == nil {
 		t.Errorf("expected a send, got nothing")
 	}
+}
+
+func TestRealClock(t *testing.T) {
+	// for coverage
+	clk := Default()
+	clk.Now()
+	clk.Sleep(1 * time.Nanosecond)
+	clk.After(1 * time.Nanosecond)
+	tt := clk.NewTimer(1 * time.Nanosecond)
+	tt.Stop()
+	tt.Reset(1 * time.Nanosecond)
 }
 
 func waitFor(c <-chan time.Time) *time.Time {
