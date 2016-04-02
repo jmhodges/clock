@@ -102,8 +102,8 @@ type FakeClock interface {
 // but the clock's time will never be adjusted.
 type fake struct {
 	sync.RWMutex
-	t      time.Time
-	timers sortedFakeTimers
+	t     time.Time
+	sends sortedSends
 }
 
 func (f *fake) Now() time.Time {
@@ -127,17 +127,14 @@ func (f *fake) After(d time.Duration) <-chan time.Time {
 func (f *fake) NewTimer(d time.Duration) *Timer {
 	ch := make(chan time.Time, 1)
 	tt := f.Now().Add(d)
-	ft := &fakeTimer{c: ch, target: tt, clk: f, active: true}
+	ft := &fakeTimer{c: ch, clk: f, active: true}
 	t := &Timer{
 		C:         ch,
 		fakeTimer: ft,
 	}
 	f.Lock()
 	defer f.Unlock()
-	f.timers = append(f.timers, t.fakeTimer)
-	// This will be a small enough slice to be fast. Can be replaced with a more
-	// complicated container if someone is making many timers.
-	sort.Sort(f.timers)
+	f.addSend(tt, ft)
 	return t
 }
 
@@ -156,23 +153,30 @@ func (f *fake) Set(t time.Time) {
 }
 
 func (f *fake) sendTimes() {
-	newTimers := make(sortedFakeTimers, 0)
-	for _, ft := range f.timers {
-		if !ft.active {
+	newSends := make(sortedSends, 0)
+	for _, s := range f.sends {
+		if !s.ft.active {
 			continue
 		}
-		if ft.target.Equal(f.t) || ft.target.Before(f.t) {
-			ft.active = false
+		if s.target.Equal(f.t) || s.target.Before(f.t) {
+			s.ft.active = false
 			// The select is to drop second sends from resets without a user
 			// receiving from ft.c.
 			select {
-			case ft.c <- ft.target:
+			case s.ft.c <- s.target:
 			default:
 			}
 		}
-		if ft.active {
-			newTimers = append(newTimers, ft)
+		if s.ft.active {
+			newSends = append(newSends, s)
 		}
 	}
-	f.timers = newTimers
+	f.sends = newSends
+}
+
+func (f *fake) addSend(target time.Time, ft *fakeTimer) {
+	f.sends = append(f.sends, send{target: target, ft: ft})
+	// This will be a small enough slice to be fast. Can be replaced with a more
+	// complicated container if someone is making many timers.
+	sort.Sort(f.sends)
 }

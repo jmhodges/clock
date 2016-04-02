@@ -25,19 +25,23 @@ func (t *Timer) Stop() bool {
 
 type fakeTimer struct {
 	c      chan<- time.Time
-	target time.Time
 	clk    *fake
 	active bool
+}
+
+type send struct {
+	target time.Time
+	ft     *fakeTimer
 }
 
 func (ft *fakeTimer) Reset(d time.Duration) bool {
 	ft.clk.Lock()
 	defer ft.clk.Unlock()
-	ft.target = ft.clk.t.Add(d)
+	target := ft.clk.t.Add(d)
 	active := ft.active
 	ft.active = true
-	if !active { // FIXME
-		ft.clk.timers = append(ft.clk.timers, ft)
+	if !active {
+		ft.clk.addSend(target, ft)
 	}
 	ft.clk.sendTimes()
 	return active
@@ -52,16 +56,16 @@ func (ft *fakeTimer) Stop() bool {
 	return active
 }
 
-type sortedFakeTimers []*fakeTimer
+type sortedSends []send
 
-func (s sortedFakeTimers) Len() int {
+func (s sortedSends) Len() int {
 	return len(s)
 }
 
-func (s sortedFakeTimers) Less(i, j int) bool {
+func (s sortedSends) Less(i, j int) bool {
 	return s[i].target.Before(s[j].target)
 }
 
-func (s sortedFakeTimers) Swap(i, j int) {
+func (s sortedSends) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
 }
