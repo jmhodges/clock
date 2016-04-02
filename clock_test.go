@@ -121,7 +121,7 @@ func TestFakeTimerReset(t *testing.T) {
 		t.Errorf("first: want %s, got %s", oneSec, t1)
 	}
 
-	if immediatelySeeNothing(tt.C) != nil {
+	if immediatelyRecv(tt.C) != nil {
 		t.Fatal("second reset should never fire")
 	}
 }
@@ -285,7 +285,7 @@ func TestFakeTimerStopStopsOldSends(t *testing.T) {
 	tt := clk.NewTimer(1 * time.Second)
 	tt.Stop()
 	clk.Add(1 * time.Second)
-	t1 := immediatelySeeNothing(tt.C)
+	t1 := immediatelyRecv(tt.C)
 	if t1 != nil {
 		t.Errorf("expected no send, got %s", *t1)
 	}
@@ -307,7 +307,7 @@ func TestFakeTimerResetStopsOldSends(t *testing.T) {
 	tt := clk.NewTimer(1 * time.Second)
 	tt.Reset(2 * time.Second)
 	clk.Add(1 * time.Second)
-	t1 := immediatelySeeNothing(tt.C)
+	t1 := immediatelyRecv(tt.C)
 	if t1 != nil {
 		t.Errorf("expected no send, got %s", *t1)
 	}
@@ -327,7 +327,7 @@ func waitFor(c <-chan time.Time) *time.Time {
 	}
 }
 
-func immediatelySeeNothing(c <-chan time.Time) *time.Time {
+func immediatelyRecv(c <-chan time.Time) *time.Time {
 	select {
 	case ti := <-c:
 		return &ti
