@@ -39,7 +39,7 @@ func New() Clock {
 	return systemClock
 }
 
-// Default is just an alias for New
+// Deprecated: Default is just an alias for New but less memorable.
 func Default() Clock {
 	return systemClock
 }
