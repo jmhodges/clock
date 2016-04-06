@@ -31,11 +31,16 @@ import (
 // surprised users. We fixed that by making systemClock a &sysClock.
 var systemClock Clock = &sysClock{}
 
-// Default returns a Clock that matches the actual system time.
-func Default() Clock {
+// New returns a Clock that matches the actual system time.
+func New() Clock {
 	// This is a method instead of a public var to prevent folks from
 	// "making things work" by writing to the var instead of passing
 	// in a Clock.
+	return systemClock
+}
+
+// Default is just an alias for New
+func Default() Clock {
 	return systemClock
 }
 
