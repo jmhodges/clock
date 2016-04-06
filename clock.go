@@ -26,7 +26,10 @@ import (
 	"time"
 )
 
-var systemClock Clock = sysClock{}
+// Some in-use reflection-heavy systems, like facebookgo/inject, fail when given
+// a value type like sysClock{}. Since it's hidden by an interface, this has
+// surprised users. We fixed that by making systemClock a &sysClock.
+var systemClock Clock = &sysClock{}
 
 // Default returns a Clock that matches the actual system time.
 func Default() Clock {
@@ -57,19 +60,19 @@ type Clock interface {
 
 type sysClock struct{}
 
-func (s sysClock) Now() time.Time {
+func (s *sysClock) Now() time.Time {
 	return time.Now()
 }
 
-func (s sysClock) Sleep(d time.Duration) {
+func (s *sysClock) Sleep(d time.Duration) {
 	time.Sleep(d)
 }
 
-func (s sysClock) After(d time.Duration) <-chan time.Time {
+func (s *sysClock) After(d time.Duration) <-chan time.Time {
 	return time.After(d)
 }
 
-func (s sysClock) NewTimer(d time.Duration) *Timer {
+func (s *sysClock) NewTimer(d time.Duration) *Timer {
 	tt := time.NewTimer(d)
 	return &Timer{C: tt.C, timer: tt}
 }
