@@ -57,6 +57,9 @@ type Clock interface {
 	// After returns a channel that fires after the given duration.
 	After(time.Duration) <-chan time.Time
 
+	// Since is a short hand for Now().Sub(t).
+	Since(time.Time) time.Duration
+
 	// NewTimer makes a Timer based on this clock's time. Using Timers and
 	// negative durations in the Clock or Timer API is undefined behavior and
 	// may be changed.
@@ -75,6 +78,10 @@ func (s *sysClock) Sleep(d time.Duration) {
 
 func (s *sysClock) After(d time.Duration) <-chan time.Time {
 	return time.After(d)
+}
+
+func (s *sysClock) Since(t time.Time) time.Duration {
+	return time.Since(t)
 }
 
 func (s *sysClock) NewTimer(d time.Duration) *Timer {
@@ -130,6 +137,10 @@ func (f *fake) Sleep(d time.Duration) {
 
 func (f *fake) After(d time.Duration) <-chan time.Time {
 	return f.NewTimer(d).C
+}
+
+func (f *fake) Since(t time.Time) time.Duration {
+	return f.Now().Sub(t)
 }
 
 func (f *fake) NewTimer(d time.Duration) *Timer {

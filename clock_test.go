@@ -28,6 +28,10 @@ func TestFakeClockGoldenPath(t *testing.T) {
 	if clk.Now().Equal(second.Now()) {
 		t.Errorf("clk should have been set forwards (by sleeping): %#v vs %#v", clk.Now(), second.Now())
 	}
+
+	if clk.Since(oldT) != time.Second {
+		t.Errorf("clk should have been set forwards by sleeping: %#v -> %#v (%d)", oldT, clk.Now(), clk.Since(oldT))
+	}
 }
 
 func TestNegativeSleep(t *testing.T) {
