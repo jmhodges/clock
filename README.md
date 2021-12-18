@@ -7,7 +7,7 @@ Package clock provides an abstraction for system time that enables testing of
 time-sensitive code.
 
 Where you'd use `time.Now`, instead use `clk.Now` where `clk` is an instance of
-`Clock`.
+`clock.Clock`.
 
 When running your code in production, pass it a `Clock` given by
 `clock.Default()` and when you're running it in your tests, pass it an instance
@@ -19,7 +19,7 @@ while also expanding the space of problems you can test.
 
 This code intentionally does not attempt to provide an abstraction over
 `time.Ticker` and `time.Timer` because Go does not have the runtime or API hooks
-available to do reliably. See https://github.com/golang/go/issues/8869
+available to do so reliably. See https://github.com/golang/go/issues/8869
 
 As with any use of `time`, be sure to test `Time` equality with
 `time.Time#Equal`, not `==`.
